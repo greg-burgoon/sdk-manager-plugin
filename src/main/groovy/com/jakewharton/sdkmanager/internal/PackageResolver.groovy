@@ -58,12 +58,31 @@ class PackageResolver {
   }
 
   def resolve() {
+    resolveBuildToolsBug()
     resolveBuildTools()
     resolvePlatformTools()
     resolveCompileVersion()
     resolveSupportLibraryRepository()
     resolvePlayServiceRepository()
     resolveEmulator()
+  }
+
+  def resolveBuildToolsBug() {
+    def buildToolsRevision = project.android.buildToolsRevision
+    def buildToolsRevisionDir = new File(buildToolsDir, buildToolsRevision.toString())
+    if (folderExists(buildToolsRevisionDir)) {
+      log.debug 'Build tools found! No need to do Jenkins bug work around.'
+      return
+    }
+
+    if (buildToolsRevision.toString().equals("23.0.2")) {
+      log.lifecycle "Trying to fetch 23.0.2. Fetching general tools to prevent 23.0.2 tools bug on Jenkins"
+
+      def code = androidCommand.update "tools"
+      if (code != 0) {
+        throw new StopExecutionException("Build tools download failed with code $code.")
+      }
+    }
   }
 
   def resolveBuildTools() {
